@@ -1,0 +1,291 @@
+[
+  {
+    "type": "command",
+    "cmd": "git status --short",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "rg -n \"separability_matrix|_separable|CompoundModel|separable\" astropy/modeling -g '*.py'",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "sed -n '1,360p' astropy/modeling/separable.py",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "sed -n '1,260p' astropy/modeling/tests/test_separable.py",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "python - <<'PY'\nfrom astropy.modeling import models as m\nfrom astropy.modeling.separable import separability_matrix\ncm = m.Linear1D(10) & m.Linear1D(5)\nprint(separability_matrix(cm))\nprint(separability_matrix(m.Pix2Sky_TAN() & cm))\nprint(separability_matrix(m.Pix2Sky_TAN() & m.Linear1D(10) & m.Linear1D(5)))\nPY",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 127
+  },
+  {
+    "type": "command",
+    "cmd": "python - <<'PY'\nfrom astropy.modeling import models as m\nfrom astropy.modeling.separable import _separable\ncm = m.Linear1D(10) & m.Linear1D(5)\nprint(_separable(cm))\nprint(_separable(m.Pix2Sky_TAN()))\nPY",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 127
+  },
+  {
+    "type": "command",
+    "cmd": "python3 - <<'PY'\nfrom astropy.modeling import models as m\nfrom astropy.modeling.separable import separability_matrix\ncm = m.Linear1D(10) & m.Linear1D(5)\nprint(separability_matrix(cm))\nprint(separability_matrix(m.Pix2Sky_TAN() & cm))\nprint(separability_matrix(m.Pix2Sky_TAN() & m.Linear1D(10) & m.Linear1D(5)))\nPY",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 1
+  },
+  {
+    "type": "command",
+    "cmd": "python3 - <<'PY'\nfrom astropy.modeling import models as m\nfrom astropy.modeling.separable import _separable\ncm = m.Linear1D(10) & m.Linear1D(5)\nprint(_separable(cm))\nprint(_separable(m.Pix2Sky_TAN()))\nPY",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 1
+  },
+  {
+    "type": "apply_patch",
+    "ops": [
+      {
+        "type": "update",
+        "path": "/opt/bench/data/astropy/astropy/modeling/separable.py",
+        "hunks": [
+          {
+            "header": "@@",
+            "blocks": [
+              {
+                "type": "context",
+                "lines": [
+                  "    if isinstance(left, Model):",
+                  "        cleft = _coord_matrix(left, 'left', noutp)",
+                  "    else:",
+                  "        cleft = np.zeros((noutp, left.shape[1]))",
+                  "        cleft[: left.shape[0], : left.shape[1]] = left",
+                  "    if isinstance(right, Model):",
+                  "        cright = _coord_matrix(right, 'right', noutp)",
+                  "    else:",
+                  "        cright = np.zeros((noutp, right.shape[1]))"
+                ]
+              },
+              {
+                "type": "delete",
+                "lines": [
+                  "        cright[-right.shape[0]:, -right.shape[1]:] = 1"
+                ]
+              },
+              {
+                "type": "add",
+                "lines": [
+                  "        cright[-right.shape[0]:, -right.shape[1]:] = right"
+                ]
+              },
+              {
+                "type": "context",
+                "lines": [
+                  "",
+                  "    return np.hstack([cleft, cright])"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "cwd": "/opt/bench/data/astropy"
+  },
+  {
+    "type": "apply_patch",
+    "ops": [
+      {
+        "type": "update",
+        "path": "/opt/bench/data/astropy/astropy/modeling/tests/test_separable.py",
+        "hunks": [
+          {
+            "header": "@@",
+            "blocks": [
+              {
+                "type": "context",
+                "lines": [
+                  "def test_custom_model_separable():",
+                  "    @custom_model",
+                  "    def model_a(x):",
+                  "        return x",
+                  ""
+                ]
+              }
+            ]
+          },
+          {
+            "header": "@@",
+            "blocks": [
+              {
+                "type": "context",
+                "lines": [
+                  "",
+                  "    assert not model_c().separable",
+                  "    assert np.all(separability_matrix(model_c()) == [True, True])"
+                ]
+              },
+              {
+                "type": "add",
+                "lines": [
+                  "",
+                  "",
+                  "def test_nested_compound_model_separability():",
+                  "    nested = models.Pix2Sky_TAN() & (models.Linear1D(10) & models.Linear1D(5))",
+                  "    unnested = models.Pix2Sky_TAN() & models.Linear1D(10) & models.Linear1D(5)",
+                  "",
+                  "    assert_allclose(separability_matrix(nested), separability_matrix(unnested))"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "cwd": "/opt/bench/data/astropy"
+  },
+  {
+    "type": "command",
+    "cmd": "python3 -m pytest astropy/modeling/tests/test_separable.py -q",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 4
+  },
+  {
+    "type": "command",
+    "cmd": "git diff -- astropy/modeling/separable.py astropy/modeling/tests/test_separable.py",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "python3 -m pip --version",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "python3 -m pip install hypothesis pyerfa",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 1
+  },
+  {
+    "type": "command",
+    "cmd": "python3 -m venv /tmp/astropy-12907-venv",
+    "cwd": "/opt/bench/data/astropy"
+  },
+  {
+    "type": "command",
+    "cmd": "rg -n \"numpy|pytest|hypothesis|pyerfa\" pyproject.toml setup.cfg setup.py tox.ini -g '!**/.venv/**'",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "/tmp/astropy-12907-venv/bin/pip install numpy pytest hypothesis pyerfa",
+    "cwd": "/opt/bench/data/astropy"
+  },
+  {
+    "type": "command",
+    "cmd": "PYTHONPATH=/opt/bench/data/astropy /tmp/astropy-12907-venv/bin/python -m pytest astropy/modeling/tests/test_separable.py -q",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 4
+  },
+  {
+    "type": "command",
+    "cmd": "sed -n '1,120p' conftest.py",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "sed -n '1,120p' astropy/version.py",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "sed -n '1,220p' pyproject.toml",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "ls astropy/_version.py",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 2
+  },
+  {
+    "type": "command",
+    "cmd": "ls astropy/_dev/scm_version.py",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "/tmp/astropy-12907-venv/bin/pip install setuptools_scm extension-helpers cython wheel",
+    "cwd": "/opt/bench/data/astropy"
+  },
+  {
+    "type": "command",
+    "cmd": "cd /opt/bench/data/astropy && /tmp/astropy-12907-venv/bin/python - <<'PY'\nfrom astropy.version import version\nprint(version)\nPY",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 1
+  },
+  {
+    "type": "command",
+    "cmd": "/tmp/astropy-12907-venv/bin/python setup.py build_ext --inplace",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 1
+  },
+  {
+    "type": "command",
+    "cmd": "/tmp/astropy-12907-venv/bin/pip install 'setuptools<70' 'cython==0.29.22' --force-reinstall",
+    "cwd": "/opt/bench/data/astropy"
+  },
+  {
+    "type": "command",
+    "cmd": "sed -n '1,220p' astropy/__init__.py",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "/tmp/astropy-12907-venv/bin/python setup.py build_ext --inplace",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_status": "failed"
+  },
+  {
+    "type": "command",
+    "cmd": "/tmp/astropy-12907-venv/bin/pip install 'numpy<2' --force-reinstall",
+    "cwd": "/opt/bench/data/astropy"
+  },
+  {
+    "type": "command",
+    "cmd": "find astropy -name '_np_utils.c' -o -name '_column_mixins.c' -o -name '_impl.c' | xargs -r rm -f && /tmp/astropy-12907-venv/bin/python setup.py build_ext --inplace",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_status": "failed"
+  },
+  {
+    "type": "command",
+    "cmd": "nl -ba astropy/modeling/separable.py | sed -n '228,250p'",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "nl -ba astropy/modeling/tests/test_separable.py | sed -n '145,165p'",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  },
+  {
+    "type": "command",
+    "cmd": "git status --short",
+    "cwd": "/opt/bench/data/astropy",
+    "expected_exit_code": 0
+  }
+]

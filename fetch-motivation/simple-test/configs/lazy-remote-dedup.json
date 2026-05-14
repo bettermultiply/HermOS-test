@@ -1,0 +1,17 @@
+{
+  "count": 4,
+  "memory_blob_url": "http://localhost:5000/v2/motivation/blobs/sha256:a14b9aadf410e6e6003b3ebcb6150a4dbceba98088c91964c9ab5124f067f705",
+  "snapshot_state_url": "http://localhost:5000/v2/motivation/blobs/sha256:fd583d9e37085230eaa4997eaafe79b6a799a78ba49830bbaa3428e440b0929c",
+  "snapshot_state": "{root}/fetch-motivation/simple-test-data/lazy-remote-dedup-agent/agent_snapshot_file",
+  "firecracker": "{root}/firecracker-build-scripts/firecracker",
+  "firecracker_cwd": "{root}/snapshots-build",
+  "uffd_handler": "{root}/firecracker-build-scripts/firecracker_src/target/release/examples/uffd_remote_range_handler",
+  "proxy_host": "127.0.0.1",
+  "proxy_port": 5100,
+  "upstream_timeout_sec": 30,
+  "work_dir": "{root}/fetch-motivation/simple-test-data/lazy-remote-dedup-agent",
+  "control_host": "172.16.0.2",
+  "control_port": 5000,
+  "timeout": 120,
+  "workload": "python-json-tool"
+}

@@ -1,0 +1,14 @@
+{
+  "count": 2,
+  "snapshot_a": "{root}/snapshots-build/agent_mem_file",
+  "snapshot_b": "/dev/shm/lazy-local-agent_mem_file",
+  "snapshot_state": "{root}/snapshots-build/agent_snapshot_file",
+  "firecracker": "{root}/firecracker-build-scripts/firecracker",
+  "firecracker_cwd": "{root}/snapshots-build",
+  "uffd_handler": "{root}/firecracker-build-scripts/firecracker_src/build/cargo_target/x86_64-unknown-linux-musl/release/examples/uffd_on_demand_handler",
+  "work_dir": "{root}/fetch-motivation/simple-test-data/lazy-local-agent",
+  "control_host": "172.16.0.2",
+  "control_port": 5000,
+  "timeout": 120,
+  "workload": "python-json-tool"
+}

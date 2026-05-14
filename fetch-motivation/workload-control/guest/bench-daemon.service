@@ -1,0 +1,33 @@
+[Unit]
+Description=Bench Daemon — workload benchmarking service
+After=network.target
+# Ensure /dev/shm/read-list.bin is present before starting
+# ConditionPathExists=/dev/shm/read-list.bin
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/bench-daemon
+
+# Restart on crash, but not on clean exit
+Restart=on-failure
+RestartSec=1s
+
+# Run as a dedicated user in production; use root only in test VMs
+# User=bench
+# Group=bench
+
+# Give the daemon time to initialize workloads before systemd marks it ready
+TimeoutStartSec=30
+
+# Hard kill after 10s if graceful stop hangs
+TimeoutStopSec=10
+
+# Reduce noise from OOM killer
+OOMScoreAdjust=-100
+
+# Basic sandboxing (remove lines that conflict with your workloads)
+# PrivateTmp=yes
+# NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
