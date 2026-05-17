@@ -7,8 +7,11 @@ fetch-motivation/data/*
 fetch-motivation/runtime-artifacts/*
 !fetch-motivation/runtime-artifacts/.gitkeep
 
-firecracker-build-scripts/*
-!firecracker-build-scripts/.gitkeep
+firecracker-build/*
+!firecracker-build/.gitkeep
+!firecracker-build/fc-change-set
+!firecracker-build/scripts
+
 faasnap/
 fetch-motivation/simple-test-data
 rootfs-predict/snapshots
