@@ -1,0 +1,43 @@
+#!/bin/sh
+set -eu
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+UPPERDEV="${overlay_root:-vdc}"
+case "$UPPERDEV" in
+    /dev/*) UPPER="$UPPERDEV" ;;
+    *) UPPER="/dev/$UPPERDEV" ;;
+esac
+
+LOWER=/lower
+OVERLAY=/overlay
+NEWROOT=/newroot
+
+mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
+mount -t proc proc /proc 2>/dev/null || true
+mount -t sysfs sysfs /sys 2>/dev/null || true
+
+i=0
+while [ ! -b "$UPPER" ] && [ "$i" -lt 50 ]; do
+    sleep 0.1
+    i=$((i + 1))
+done
+
+mkdir -p "$LOWER" "$OVERLAY" "$NEWROOT"
+mount --bind / "$LOWER"
+mount "$UPPER" "$OVERLAY"
+
+mkdir -p "$OVERLAY/root-upper" "$OVERLAY/root-work"
+mount -t overlay overlay-root \
+    -o lowerdir="$LOWER",upperdir="$OVERLAY/root-upper",workdir="$OVERLAY/root-work" \
+    "$NEWROOT"
+
+mkdir -p "$NEWROOT/rom" "$NEWROOT/dev" "$NEWROOT/proc" "$NEWROOT/sys"
+pivot_root "$NEWROOT" "$NEWROOT/rom"
+
+mount --move /rom/dev /dev 2>/dev/null || mount -t devtmpfs devtmpfs /dev
+mount --move /rom/proc /proc 2>/dev/null || mount -t proc proc /proc
+mount --move /rom/sys /sys 2>/dev/null || mount -t sysfs sysfs /sys
+
+cd /
+exec /sbin/init

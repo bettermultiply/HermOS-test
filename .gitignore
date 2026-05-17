@@ -12,9 +12,8 @@ firecracker-build/*
 !firecracker-build/fc-change-set
 !firecracker-build/scripts
 
-rootfs-predict/snapshots
-rootfs-predict/runs
-rootfs-predict/data
+kata-compare/state/*
+!kata-compare/state/.gitkeep
 
 restore-motivation/target
 restore-motivation/scripts/plot
@@ -25,6 +24,15 @@ restore-motivation/results/*
 restore-motivation/rootfs_file_control
 restore-motivation/overlay.ext4
 restore-motivation/firecracker
+
+rootfs-predict/.venv
+rootfs-predict/data/*
+!rootfs-predict/data/.gitkeep
+rootfs-predict/snapshots/*
+!rootfs-predict/snapshots/.gitkeep
+rootfs-predict/runs/*
+!rootfs-predict/runs/.gitkeep
+
 
 snapshots-build/*
 !snapshots-build/.gitkeep
