@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "name": "kata-compare-pod",
+    "uid": "kata-compare-pod",
+    "namespace": "default",
+    "attempt": 1
+  },
+  "hostname": "kata-compare-pod",
+  "log_directory": "/tmp/kata-compare/logs",
+  "labels": {
+    "app": "kata-compare",
+    "suite": "sandbox-startup"
+  },
+  "annotations": {},
+  "linux": {
+    "security_context": {
+      "namespace_options": {
+        "network": 0,
+        "pid": 0,
+        "ipc": 0
+      },
+      "privileged": false,
+      "readonly_rootfs": false
+    }
+  }
+}
