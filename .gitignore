@@ -9,8 +9,6 @@ fetch-motivation/runtime-artifacts/*
 
 firecracker-build-scripts/*
 !firecracker-build-scripts/.gitkeep
-snapshots-build/*
-!snapshots-build/.gitkeep
 faasnap/
 fetch-motivation/simple-test-data
 rootfs-predict/snapshots
@@ -22,3 +20,8 @@ restore-motivation/results
 restore-motivation/rootfs_file_control
 restore-motivation/overlay.ext4
 restore-motivation/firecracker
+
+snapshots-build/*
+!snapshots-build/.gitkeep
+!snapshots-build/scripts
+!snapshots-build/config
