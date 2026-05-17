@@ -1,0 +1,17 @@
+[package]
+name = "fc-restore-bench"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "bench"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+vm-memory = { version = "=0.17.1", features = ["backend-mmap", "backend-bitmap"] }
+linux-loader = "0.13.2"
+vmm-sys-util = { version = "0.15.0", features = ["with-serde"] }
+event-manager = "0.4.2"
+nix = { version = "0.29", features = ["mman", "fs", "user", "sched"] }
+vmm = { path = "/home/betmul/BETMUL/Testground/HermOS-test/firecracker-build-scripts/firecracker_src/src/vmm" }
