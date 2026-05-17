@@ -8,6 +8,7 @@ from launch.snapshot_start import load_snapshot
 from launch.uffd_start import start_uffd_handlers, uffd_sock
 from utils.common import cleanup_sandboxes, ensure_root, load_config, now_ms, parallel_map, run_parallel_workloads
 from utils.remote_helpers import count_uffd_copied_pages
+from utils.result_csv import append_experiment_run
 from utils.workload_run import run_workload
 
 
@@ -43,14 +44,28 @@ def main():
         results = [item[0] for item in raw_results]
         stop(uffd_procs)
         uffd_procs = []
+        copied_pages_total = count_uffd_copied_pages(cfg["work_dir"], count)
+        record = append_experiment_run(
+            group_name="lazy-local",
+            cfg=cfg,
+            results=results,
+            memory_pull_ms=0,
+            snapshot_state_pull_ms=0,
+            sandbox_start_ms=sandbox_start_ms,
+            workload_run_ms=workload_run_ms,
+            copied_pages_total=copied_pages_total,
+        )
         print(
             json.dumps(
                 {
+                    **record,
                     "workloads": results,
+                    "memory_pull_ms": 0,
+                    "snapshot_state_pull_ms": 0,
                     "snapshot_pull_ms": 0,
                     "sandbox_start_ms": sandbox_start_ms,
                     "workload_run_ms": workload_run_ms,
-                    "copied_pages": count_uffd_copied_pages(cfg["work_dir"], count),
+                    "copied_pages": copied_pages_total,
                 },
                 indent=2,
             )

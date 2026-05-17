@@ -53,10 +53,15 @@ sudo python3 fetch-motivation/simple-test/Eager-Local.py
 - `{root}/snapshots-build/overlay.ext4`
 - `{root}/snapshots-build/rootfs_file_control`
 
-Lazy 组还需要 Firecracker examples 中的 uffd handler，例如：
+Lazy 组还需要编译 Firecracker examples 中的 uffd handler，例如：
 
 - `uffd_on_demand_handler`
 - `uffd_remote_range_handler`
+
+当前仓库里的 lazy 组配置默认指向：
+
+- `{root}/firecracker-build-scripts/firecracker_src/build/cargo_target/release/examples/uffd_on_demand_handler`
+- `{root}/firecracker-build-scripts/firecracker_src/build/cargo_target/release/examples/uffd_remote_range_handler`
 
 Remote 组需要一个可访问的 HTTP blob 服务。Eager-Remote 会整文件下载
 `memory_snapshot_url` 和 `snapshot_state_url`；Lazy-Remote 和
@@ -94,15 +99,23 @@ daemon 返回 `text/plain`，包含：
 | `read-list` | 顺序读取 `/dev/shm/read-list.bin` |
 | `agent-tool-replay` | replay 固定 agent tool trace |
 
-注意：`simple-test/configs/*.json` 里目前保留了 `control_host`、
-`control_port` 和 `workload` 字段，但执行路径尚未读取这些字段。实际 workload
-请求在 `simple-test/utils/workload_run.py` 中由 `WORKLOAD_URL` 决定，当前默认是：
+当前 workload 由 `simple-test/utils/workload_run.py` 中的 `WORKLOAD_URL`
+单点决定，当前默认是：
 
 ```python
 WORKLOAD_URL = "http://172.16.0.2:8080/cli-pipeline"
 ```
 
-切换 workload 时先修改这个常量，或者后续再把它接回 JSON 配置。
+单独运行某个实验组时，默认会使用这个常量。批量脚本
+`scripts/run_four_groups.py` 会通过环境变量 `WORKLOAD_ID` 自动覆盖 path，
+依次运行默认 workload 列表：`health-daemon`、`health-exec`、`read-list`。
+如果加上 `--with-agent-tool-replay`，才会把 `agent-tool-replay` 追加进去。
+如果要手工切换单次运行的 workload，也可以在启动前设置：
+
+```bash
+sudo WORKLOAD_ID=read-list \
+  python3 fetch-motivation/simple-test/Lazy-Local.py
+```
 
 ## 准备 guest rootfs
 
@@ -190,6 +203,40 @@ sudo python3 fetch-motivation/simple-test/Lazy-Remote-Dedup.py
 也可以从 `fetch-motivation` 目录运行，但路径示例仍按 `{root}` 展开到上级
 `HermOS-test`。
 
+如果要用同一个并发数批量跑四个默认实验组（`Eager-Local`、`Eager-Remote`、
+`Lazy-Local`、`Lazy-Remote-Dedup`），并自动轮流跑一组 workload
+（默认是 `health-daemon`、`health-exec`、`read-list`），可以用：
+
+```bash
+sudo python3 fetch-motivation/scripts/run_four_groups.py --count 4
+```
+
+如果要连续跑多轮，例如“10 并发，跑 10 轮”，可以用：
+
+```bash
+sudo python3 fetch-motivation/scripts/run_four_groups.py --count 10 --repeats 10
+```
+
+可选参数：
+
+- `--repeats <n>`：同一并发数连续跑多少轮，默认是 `1`。
+- `--log-dir <path>`：每组 stdout/stderr 的日志目录，默认是
+  `fetch-motivation/data/batch-runs/`。
+- `--with-lazy-remote`：额外再跑 `Lazy-Remote`，作为可选第五组。
+- `--with-agent-tool-replay`：把 `agent-tool-replay` 追加到默认 workload 列表末尾。
+- `--workloads <id...>`：覆盖默认 workload 列表，自定义运行顺序。
+
+这个 runner 会临时把对应配置文件里的 `count` 改成指定值，逐组运行后再恢复原值。
+`data/batch-runs/` 下的目录规则是：
+
+- 不同并发数使用不同目录，例如 `count_1`、`count_4`、`count_16`。
+- 相同并发数下的不同批量运行轮次使用 `run_<n>`。
+- 分配时优先使用第一个缺失的编号；例如已有 `run_1`、`run_3`、`run_4`，下一次会用 `run_2`。
+- 当中间没有空洞时继续递增；例如已有 `run_1` 到 `run_4`，下一次会用 `run_5`。
+- 每一轮还会把 `REPEAT_IDX` 自动写成实际分配到的 `run_<n>` 编号，用于 CSV 汇总。
+- 每个 `run_<n>/` 下面按 `组名--workload名.log` 保存日志，例如
+  `eager-local--health-daemon.log`。
+
 每个脚本都会在 `finally` 中清理：
 
 - Firecracker 进程
@@ -203,14 +250,38 @@ sudo python3 fetch-motivation/simple-test/Lazy-Remote-Dedup.py
 
 ## 输出
 
-脚本会打印过程日志，并在最后输出 JSON。主要字段：
+脚本会打印过程日志，并在最后输出 JSON。同时会向
+`fetch-motivation/data/experiment_runs.csv` 追加一行汇总记录。CSV 字段如下：
+
+- `run_id`：本次运行的唯一 ID。
+- `group_name`：实验组名称，例如 `eager-local`、`eager-remote`、`lazy-local`、
+  `lazy-remote`、`lazy-remote-dedup`。
+- `concurrency`：本次运行的 sandbox 并发数，对应配置里的 `count`。
+- `repeat_idx`：重复实验编号；当前如果没有外层多轮 runner，默认写 `0`。如需覆盖，
+  可以在启动前设置环境变量 `REPEAT_IDX`。
+- `workload_id`：guest 实际返回的 workload 名称；如果本轮结果里没有该字段，则回退到
+  当前 `WORKLOAD_URL` 的 path。
+- `workload_ms_avg`：本轮所有 sandbox 的 `workload_ms` 平均值。
+- `memory_pull_ms`：memory snapshot 下载耗时。没有这个操作时写 `0`。
+- `snapshot_state_pull_ms`：snapshot state 下载耗时。没有这个操作时写 `0`。
+- `sandbox_start_ms`：创建 netns、启动 Firecracker、启动 uffd handler、调用
+  `/snapshot/load` 并 resume VM 的总耗时。
+- `workload_run_ms`：host 并发发送 workload 请求到所有 sandbox 完成的墙钟时间。
+- `roundtrip_ms_max`：本轮所有 sandbox 中最大的 `client_round_trip_ms`。
+- `copied_pages_total`：本轮所有 sandbox 的 copied page 总数。没有这个操作时写 `0`。
+- `total_time_ms`：`memory_pull_ms + snapshot_state_pull_ms + sandbox_start_ms + workload_run_ms`。
+
+stdout JSON 中仍会保留更细的调试字段。主要字段：
 
 - `snapshot_pull_ms`：remote 组下载 snapshot 数据的时间。Eager-Remote 还会拆成
   `memory_pull_ms` 和 `snapshot_state_pull_ms`。
 - `sandbox_start_ms`：创建 netns、启动 Firecracker、启动 uffd handler、调用
   `/snapshot/load` 并 resume VM 的总耗时。
 - `workload_run_ms`：host 并发发送 workload 请求到所有 sandbox 完成的墙钟时间。
-- `copied_pages`：Lazy 组从 `uffd-<i>.log` 行数估算的 copied page 数。
+- `roundtrip_ms_max`：本轮所有 sandbox 中最大的 workload 请求 round-trip 时间。
+- `total_time_ms`：本次运行的总墙钟时间。
+- `copied_pages`：Lazy 组从每个 `uffd-<i>.log` 中读取 handler 退出时输出的
+  `COPIED_PAGES=<n>` summary。旧日志没有 summary 时，仍会回退到按非空行数估算。
 - `dedup_proxy`：Lazy-Remote-Dedup 的代理统计，包括 `client_requests`、
   `remote_requests`、`dedup_ratio`、`bandwidth_saving`、`cache_hits` 和
   `inflight_hits`。
@@ -231,9 +302,49 @@ sudo python3 fetch-motivation/simple-test/Lazy-Remote-Dedup.py
 Firecracker 和 uffd handler 日志在：
 
 ```text
-simple-test-data/<group>/run_<id>/firecracker-<id>.log
-simple-test-data/<group>/run_<id>/uffd-<id>.log
-simple-test-data/<group>/range-dedup-proxy.log
+runtime-artifacts/<group>/run_<id>/firecracker-<id>.log
+runtime-artifacts/<group>/run_<id>/uffd-<id>.log
+runtime-artifacts/<group>/range-dedup-proxy.log
+```
+
+## 绘图
+
+`scripts/plot_transfer_execution.py` 会从 `data/experiment_runs.csv` 读取汇总结果，
+绘制三子图 grouped bar 组合图：
+
+- 默认 workload 顺序是 `health-exec`、`read-list`、`agent-tool-replay`。
+- y 轴口径是 `memory_pull_ms + snapshot_state_pull_ms + workload_ms_avg`，
+  即 transfer time + execution time，不包含 `sandbox_start_ms` / restoration time。
+- 同一并发度的多轮实验取 median。
+- 每个 concurrency 是一组柱，组内顺序为 `Eager / local`、`Lazy / local`、
+  `Eager / remote`、`Lazy / remote`。
+- eager 柱顶的浅色覆盖部分表示 transfer portion，即
+  `workload_ms_avg -> memory_pull_ms + snapshot_state_pull_ms + workload_ms_avg`。
+- 默认使用对数 y 轴；如需线性 y 轴，可加 `--yscale linear`。
+
+生成 SVG、PNG 和 PDF：
+
+```bash
+python3 fetch-motivation/scripts/plot_transfer_execution.py
+```
+
+输出路径默认是：
+
+```text
+fetch-motivation/data/figures/transfer_execution_breakdown.{svg,png,pdf}
+```
+
+如果要把轻量 workload 改成 `health-daemon`，可以指定：
+
+```bash
+python3 fetch-motivation/scripts/plot_transfer_execution.py \
+  --workloads health-daemon read-list agent-tool-replay
+```
+
+如果要生成线性 y 轴对照版：
+
+```bash
+python3 fetch-motivation/scripts/plot_transfer_execution.py --yscale linear
 ```
 
 ## 零页扫描
@@ -259,9 +370,7 @@ python3 fetch-motivation/simple-test/zero-pages.py \
 ## 当前限制
 
 - Lazy+Prefetch-Remote 还没有实现。
-- workload URL 目前硬编码在 `simple-test/utils/workload_run.py`，配置文件中的
-  `workload/control_host/control_port` 暂时不会生效。
-- 当前没有统一的多轮 runner 或结果聚合脚本；需要外层脚本多次调用这些入口并保存 stdout。
-- `copied_pages` 只是按 uffd 日志行数计数，依赖 handler 每 copy 一页输出一行。
+- workload URL 目前故意硬编码在 `simple-test/utils/workload_run.py`，用于让所有实验组共用同一个切换点。
+- 当前只有 `scripts/run_four_groups.py` 这一类固定编排 runner；如果后续要做更复杂的并发数 sweep、结果聚合或画图，仍然需要额外脚本。
 - `workload-control/README*.md` 里仍有旧的 `motivation-agent:5000` 描述；当前
   `simple-test` 路径以 `bench-daemon:8080` 为准。

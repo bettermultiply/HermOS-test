@@ -23,9 +23,9 @@ def wait_sock(path: Path, timeout: float = 30) -> None:
 
 
 def start_uffd(i, handler, work_dir, memory_snapshot):
-    sandbox_work_dir = run_work_dir(work_dir, i)
+    run_dir = run_work_dir(work_dir, i)
     uffd_sock(work_dir, i).unlink(missing_ok=True)
-    log = (sandbox_work_dir / f"uffd-{i}.log").open("ab")
+    log = (run_dir / f"uffd-{i}.log").open("wb")
     proc = sp.Popen([str(handler), str(uffd_sock(work_dir, i)), str(memory_snapshot)], stdout=log, stderr=sp.STDOUT)
     wait_sock(uffd_sock(work_dir, i))
     return proc

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess as sp
 import time
 
 
 WORKLOAD_URL = "http://172.16.0.2:8080/cli-pipeline"
+WORKLOAD_OVERRIDE_ENV = "WORKLOAD_ID"
 
 # "health-daemon",                  
 # "health-exec",                      
@@ -16,11 +18,24 @@ WORKLOAD_URL = "http://172.16.0.2:8080/cli-pipeline"
 # "read-list",                          
 # "agent-tool-replay",          
 
+
+def default_workload_id() -> str:
+    return WORKLOAD_URL.rsplit("/", 1)[-1]
+
+
+def current_workload_id() -> str:
+    return os.environ.get(WORKLOAD_OVERRIDE_ENV, default_workload_id())
+
+
+def current_workload_url() -> str:
+    base, _, _ = WORKLOAD_URL.rpartition("/")
+    return f"{base}/{current_workload_id()}"
+
 def run_workload(item, timeout):
     i, n = item
     start_ns = time.monotonic_ns()
     r = sp.run(
-        ["ip", "netns", "exec", n["ns"], "curl", "-i", WORKLOAD_URL],
+        ["ip", "netns", "exec", n["ns"], "curl", "-i", current_workload_url()],
         text=True,
         stdout=sp.PIPE,
         stderr=sp.PIPE,

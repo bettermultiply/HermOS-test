@@ -1,10 +1,12 @@
 .codex
 __pycache__/
 *.py[cod]
-fetch-motivation/results/*
-!fetch-motivation/results/.gitkeep
-fetch-motivation/logs/*
-!fetch-motivation/logs/.gitkeep
+
+fetch-motivation/data/*
+!fetch-motivation/data/.gitkeep
+fetch-motivation/runtime-artifacts/*
+!fetch-motivation/runtime-artifacts/.gitkeep
+
 firecracker-build-scripts/*
 !firecracker-build-scripts/.gitkeep
 snapshots-build/*

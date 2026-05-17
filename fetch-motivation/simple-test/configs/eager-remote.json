@@ -2,13 +2,10 @@
   "count": 4,
   "memory_snapshot_url": "http://localhost:5000/v2/motivation/blobs/sha256:a14b9aadf410e6e6003b3ebcb6150a4dbceba98088c91964c9ab5124f067f705",
   "snapshot_state_url": "http://localhost:5000/v2/motivation/blobs/sha256:fd583d9e37085230eaa4997eaafe79b6a799a78ba49830bbaa3428e440b0929c",
-  "memory_snapshot": "{root}/fetch-motivation/simple-test-data/eager-remote-agent/agent_mem_file",
-  "snapshot_state": "{root}/fetch-motivation/simple-test-data/eager-remote-agent/agent_snapshot_file",
+  "memory_snapshot": "{root}/fetch-motivation/runtime-artifacts/eager-remote-agent/agent_mem_file",
+  "snapshot_state": "{root}/fetch-motivation/runtime-artifacts/eager-remote-agent/agent_snapshot_file",
   "firecracker": "{root}/firecracker-build-scripts/firecracker",
   "firecracker_cwd": "{root}/snapshots-build",
-  "work_dir": "{root}/fetch-motivation/simple-test-data/eager-remote-agent",
-  "control_host": "172.16.0.2",
-  "control_port": 5000,
-  "timeout": 120,
-  "workload": "python-json-tool"
+  "work_dir": "{root}/fetch-motivation/runtime-artifacts/eager-remote-agent",
+  "timeout": 120
 }

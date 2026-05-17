@@ -7,6 +7,7 @@ from launch.firecracker_start import api_sock, start_sandboxes
 from launch.snapshot_start import load_snapshot
 from utils.common import cleanup_sandboxes, ensure_root, load_config, now_ms, parallel_map, run_parallel_workloads
 from utils.remote_helpers import download_timed
+from utils.result_csv import append_experiment_run
 from utils.workload_run import run_workload
 
 
@@ -41,9 +42,20 @@ def main():
         raw_results = run_parallel_workloads(count, netns, cfg["timeout"], run_workload)
         workload_run_ms = now_ms() - start
         results = [item[0] for item in raw_results]
+        record = append_experiment_run(
+            group_name="eager-remote",
+            cfg=cfg,
+            results=results,
+            memory_pull_ms=memory_pull_ms,
+            snapshot_state_pull_ms=snapshot_state_pull_ms,
+            sandbox_start_ms=sandbox_start_ms,
+            workload_run_ms=workload_run_ms,
+            copied_pages_total=0,
+        )
         print(
             json.dumps(
                 {
+                    **record,
                     "memory_pull_ms": memory_pull_ms,
                     "snapshot_state_pull_ms": snapshot_state_pull_ms,
                     "snapshot_pull_ms": snapshot_pull_ms,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess as sp
 import sys
 import time
@@ -9,6 +10,8 @@ from pathlib import Path
 
 from launch.uffd_start import uffd_sock, wait_sock
 from utils.run_work_dir import run_work_dir
+
+COPIED_PAGES_RE = re.compile(rb"^COPIED_PAGES=(\d+)$")
 
 
 def download_timed(url: str, target: Path) -> float:
@@ -32,14 +35,25 @@ def count_uffd_copied_pages(work_dir: Path, count: int) -> int:
         if not path.exists():
             continue
         with path.open("rb") as f:
-            total += sum(1 for line in f if line.strip())
+            summary = None
+            fallback = 0
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line:
+                    continue
+                match = COPIED_PAGES_RE.match(line)
+                if match:
+                    summary = int(match.group(1))
+                    continue
+                fallback += 1
+            total += summary if summary is not None else fallback
     return total
 
 
 def start_remote_uffd(i: int, handler: Path, work_dir: Path, memory_blob_url: str):
-    sandbox_work_dir = run_work_dir(work_dir, i)
+    run_dir = run_work_dir(work_dir, i)
     uffd_sock(work_dir, i).unlink(missing_ok=True)
-    log = (sandbox_work_dir / f"uffd-{i}.log").open("wb")
+    log = (run_dir / f"uffd-{i}.log").open("wb")
     proc = sp.Popen(
         [str(handler), str(uffd_sock(work_dir, i)), memory_blob_url, str(i)],
         stdout=log,

@@ -8,6 +8,7 @@ from launch.snapshot_start import load_snapshot
 from launch.uffd_start import uffd_sock
 from utils.common import cleanup_sandboxes, download, ensure_root, load_config, now_ms, parallel_map, run_parallel_workloads
 from utils.remote_helpers import count_uffd_copied_pages, start_remote_uffd_handlers
+from utils.result_csv import append_experiment_run
 from utils.workload_run import run_workload
 
 
@@ -20,11 +21,14 @@ def main():
     count = int(cfg["count"])
     cfg["work_dir"].mkdir(parents=True, exist_ok=True)
 
+    memory_pull_ms = 0
+    snapshot_state_pull_ms = 0
     snapshot_pull_ms = 0
     if cfg.get("snapshot_state_url"):
         start = now_ms()
         download(cfg["snapshot_state_url"], cfg["snapshot_state"])
-        snapshot_pull_ms = now_ms() - start
+        snapshot_state_pull_ms = now_ms() - start
+        snapshot_pull_ms = snapshot_state_pull_ms
         print(f"downloaded snapshot state: {cfg['snapshot_state']}")
 
     netns, fc_procs, uffd_procs = [], [], []
@@ -46,13 +50,27 @@ def main():
         results = [item[0] for item in raw_results]
         stop(uffd_procs)
         uffd_procs = []
+        copied_pages_total = count_uffd_copied_pages(cfg["work_dir"], count)
+        record = append_experiment_run(
+            group_name="lazy-remote",
+            cfg=cfg,
+            results=results,
+            memory_pull_ms=memory_pull_ms,
+            snapshot_state_pull_ms=snapshot_state_pull_ms,
+            sandbox_start_ms=sandbox_start_ms,
+            workload_run_ms=workload_run_ms,
+            copied_pages_total=copied_pages_total,
+        )
         print(
             json.dumps(
                 {
+                    **record,
+                    "memory_pull_ms": memory_pull_ms,
+                    "snapshot_state_pull_ms": snapshot_state_pull_ms,
                     "snapshot_pull_ms": snapshot_pull_ms,
                     "sandbox_start_ms": sandbox_start_ms,
                     "workload_run_ms": workload_run_ms,
-                    "copied_pages": count_uffd_copied_pages(cfg["work_dir"], count),
+                    "copied_pages": copied_pages_total,
                     "workloads": results,
                 },
                 indent=2,
